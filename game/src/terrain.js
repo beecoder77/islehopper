@@ -77,7 +77,8 @@ function pushFace(faces, pts, base, jitterSeed) {
     nz += (a[0] - b[0]) * (a[1] + b[1]);
   }
   const l = Math.hypot(nx, ny, nz) || 1;
-  const jitter = 0.94 + 0.1 * ((Math.sin(jitterSeed * 127.1) * 43758.5453) % 1 + 1) % 1;
+  const frac = ((Math.sin(jitterSeed * 127.1) * 43758.5453) % 1 + 1) % 1;
+  const jitter = 0.965 + 0.07 * frac;
   faces.push({ p: pts, c: shade(base, nx / l, ny / l, nz / l, jitter) });
 }
 
@@ -110,7 +111,8 @@ function pushTower(faces, x, y, z, r0, r1, h, base, seed) {
 
 /** Ground colour by height and steepness: sand, grass, rock, pale summit. */
 function groundColour(h, ny) {
-  if (h < 1.2) return [62, 142, 166]; // shallows over sand
+  if (h < 1.0) return [23, 92, 118]; // open sea — matches the sea sheet exactly
+  if (h < 2.4) return [62, 142, 166]; // shallows over sand
   if (h < 7) return [217, 192, 138]; // beach
   if (ny < 0.72) return [138, 131, 120]; // cliff rock
   if (h > 150) return [186, 180, 166]; // Mount Vireo's pale cap
@@ -142,8 +144,10 @@ function pushHeightfield(faces, cx, cz, size, cells, seedBase) {
       const wx = v[3][0] - v[0][0], wz = v[3][2] - v[0][2], wy = v[3][1] - v[0][1];
       const ny = Math.abs(uz * wx - ux * wz) / (Math.hypot(uy * wz - uz * wy, uz * wx - ux * wz, ux * wy - uy * wx) || 1);
       const base = groundColour(midH, ny);
-      pushFace(faces, [v[0], v[1], v[2]], base, seedBase + i * 3 + j * 7);
-      pushFace(faces, [v[0], v[2], v[3]], base, seedBase + i * 5 + j * 11);
+      // Wholly submerged triangles are left to the sea sheet beneath, so the
+      // water has no quilted seams and the shore is where the island is.
+      if (Math.max(H[j][i], H[j][i + 1], H[j + 1][i + 1]) > 0.02) pushFace(faces, [v[0], v[1], v[2]], base, seedBase + i * 3 + j * 7);
+      if (Math.max(H[j][i], H[j + 1][i + 1], H[j + 1][i]) > 0.02) pushFace(faces, [v[0], v[2], v[3]], base, seedBase + i * 5 + j * 11);
     }
   }
 }
@@ -226,20 +230,53 @@ export function buildRunwayField(faces) {
 /** The lighthouse keeper's boat, riding at anchor east of Vireo Light. */
 export function buildRescueBoat(faces) {
   const { x, z } = LANDMARKS.boat;
-  pushBox(faces, x, 0.2, z, 16, 2.6, 5.4, [196, 54, 44], 11100); // hull
-  pushBox(faces, x - 1, 2.8, z, 7, 2.6, 4.2, [242, 240, 234], 11150); // cabin
-  pushBox(faces, x + 3.4, 2.8, z, 0.5, 9, 0.5, [90, 80, 70], 11200); // mast
-  pushBox(faces, x, 0.9, z, 19, 0.8, 6.4, [120, 116, 108], 11250); // bow/stern taper feel
+  pushBox(faces, x, 0.2, z, 24, 3.8, 8, [196, 54, 44], 11100); // hull
+  pushBox(faces, x - 1.5, 3.6, z, 10, 3.6, 6, [242, 240, 234], 11150); // cabin
+  pushBox(faces, x + 5, 3.6, z, 0.7, 13, 0.7, [90, 80, 70], 11200); // mast
+  pushBox(faces, x, 1.2, z, 28, 1.1, 9.4, [120, 116, 108], 11250); // gunwale line
+}
+
+/** Scattered pines on the grass of both islands — the island, lived in. */
+export function buildTreeLine(faces) {
+  const rng = mulberry32(4242);
+  let seed = 12000;
+  let placed = 0;
+  for (let tries = 0; tries < 900 && placed < 150; tries++) {
+    const onField = rng() < 0.25;
+    const x = onField ? 1300 + rng() * 750 : (rng() - 0.5) * 2000;
+    const z = onField ? -220 + rng() * 640 : (rng() - 0.5) * 2000;
+    const g = groundHeight(x, z);
+    if (g < 8 || g > 95) continue;
+    if (Math.hypot(x - LANDMARKS.city.x, z - LANDMARKS.city.z) < 330) continue;
+    if (x > 1380 && x < 1970 && Math.abs(z - 100) < 70) continue; // the strip itself
+    if (Math.hypot(x - LANDMARKS.lighthouse.x, z - LANDMARKS.lighthouse.z) < 40) continue;
+    const h = 8 + rng() * 6;
+    pushTower(faces, x, g - 0.5, z, 3.6, 0.4, h, [43, 106, 50], seed += 9);
+    placed++;
+  }
 }
 
 /** Every static face of the world, plus the sea. */
 export function buildIslandWorld() {
   const faces = [];
-  // The sea: four great triangles of deep teal, and a paler shelf near shore
-  // is painted by the heightfield's shallows.
+  // The sea: a grid of deep-teal squares out to the horizon (a grid, not
+  // four great triangles, so a square behind the camera never takes the
+  // whole ocean with it when it is culled). The paler shelf near shore is
+  // painted by the heightfield's shallows.
   const S = 4200, sea = [23, 92, 118];
-  pushFace(faces, [[-S, 0, -S], [S, 0, -S], [S, 0, S]], sea, 1);
-  pushFace(faces, [[-S, 0, -S], [S, 0, S], [-S, 0, S]], sea, 2);
+  const seaCell = (gx, gz, cell) => {
+    pushFace(faces, [[gx, 0, gz], [gx + cell, 0, gz], [gx + cell, 0, gz + cell]], sea, gx * 3 + gz * 7);
+    pushFace(faces, [[gx, 0, gz], [gx + cell, 0, gz + cell], [gx, 0, gz + cell]], sea, gx * 5 + gz * 11);
+  };
+  // Fine cells near the islands: a cell that slips behind the camera takes
+  // only a small patch of ocean with it. Coarse cells out to the horizon.
+  for (let gx = -1400; gx < 1400; gx += 200) for (let gz = -1400; gz < 1400; gz += 200) seaCell(gx, gz, 200);
+  for (let gx = -S; gx < S; gx += 700) {
+    for (let gz = -S; gz < S; gz += 700) {
+      if (gx >= -1400 && gx + 700 <= 1400 && gz >= -1400 && gz + 700 <= 1400) continue;
+      seaCell(gx, gz, 700);
+    }
+  }
   pushHeightfield(faces, 0, 0, 2350, 34, 100);
   pushHeightfield(faces, 1650, 100, 900, 13, 200);
   buildCoastalCity(faces);
@@ -247,6 +284,7 @@ export function buildIslandWorld() {
   buildHarborBridge(faces);
   buildRunwayField(faces);
   buildRescueBoat(faces);
+  buildTreeLine(faces);
   return faces;
 }
 

@@ -45,7 +45,7 @@ export function stageShot(name, state) {
     startRescueDropMission(sortie);
     sortie.score = 1890;
     dress(plane, fuel, damage, {
-      plane: { x: 690, y: 128, z: 335, heading: 1.22, pitch: -0.03, roll: 0.05, speed: 38, throttle: 0.5, gearDown: false },
+      plane: { x: 1080, y: 112, z: 520, heading: 0.22, pitch: -0.03, roll: 0.04, speed: 38, throttle: 0.5, gearDown: false },
       fuel: 84, integrity: 96,
     });
     settle(plane, 0.3);

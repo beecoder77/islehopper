@@ -170,13 +170,27 @@ export function drawCompass(ctx, x, y, r, plane) {
   label(ctx, x, y + r + 16, 'COMPASS');
 }
 
-/** Vertical speed, feet per minute, ±2,000. */
+/** Vertical speed, feet per minute, ±2,000: zero at nine o'clock. */
 export function drawVerticalSpeedGauge(ctx, x, y, r, plane) {
   rim(ctx, x, y, r);
-  ticks(ctx, x, y, r, 8, 2, true, (i) => String(Math.abs(i <= 4 ? i : i - 8)));
-  const fpm = plane.verticalSpeed * 196.85;
-  const sweep = Math.max(-2000, Math.min(2000, fpm)) / 2000 * Math.PI * 0.75;
-  needle(ctx, x, y, r, -Math.PI / 2 + sweep, '#8fe3ff');
+  const angleFor = (fpm) => -Math.PI / 2 + (Math.max(-2000, Math.min(2000, fpm)) / 2000) * Math.PI * 0.75;
+  ctx.strokeStyle = CREAM;
+  ctx.fillStyle = CREAM;
+  ctx.font = '700 13px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let fpm = -2000; fpm <= 2000; fpm += 250) {
+    const a = angleFor(fpm);
+    const major = fpm % 1000 === 0;
+    ctx.lineWidth = major ? 2.6 : 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.sin(a) * (r - 8), y - Math.cos(a) * (r - 8));
+    ctx.lineTo(x + Math.sin(a) * (r - 8 - (major ? 11 : 6)), y - Math.cos(a) * (r - 8 - (major ? 11 : 6)));
+    ctx.stroke();
+    if (major) ctx.fillText(String(Math.abs(fpm / 1000)), x + Math.sin(a) * (r - 30), y - Math.cos(a) * (r - 30));
+  }
+  ctx.textBaseline = 'alphabetic';
+  needle(ctx, x, y, r, angleFor(plane.verticalSpeed * 196.85), '#8fe3ff');
   label(ctx, x, y + r + 16, 'VERT SPEED');
 }
 
@@ -228,11 +242,11 @@ export function drawCockpitPanel(ctx, W, H, s) {
   // The red cowling ahead of the windscreen.
   ctx.fillStyle = '#a33327';
   ctx.beginPath();
-  ctx.ellipse(W / 2, panelTop + 66, 210, 74, 0, Math.PI, Math.PI * 2);
+  ctx.ellipse(W / 2, panelTop + 34, 215, 62, 0, Math.PI, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.beginPath();
-  ctx.ellipse(W / 2, panelTop + 62, 210, 70, 0, Math.PI, Math.PI * 2);
+  ctx.ellipse(W / 2, panelTop + 30, 215, 58, 0, Math.PI, Math.PI * 2);
   ctx.fill();
   // The panel itself, with a lit top edge.
   ctx.fillStyle = PANEL;

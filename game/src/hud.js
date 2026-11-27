@@ -21,18 +21,18 @@ export function formatKnots(speed) {
 }
 
 /** A translucent instrument plate with a label and a big value. */
-function plate(ctx, x, y, w, label, value, colour = '#eaf6ff') {
+function plate(ctx, x, y, w, label, value, colour = '#eaf6ff', h = 74, fontPx = 40) {
   ctx.fillStyle = 'rgba(8,18,28,0.62)';
   ctx.beginPath();
-  ctx.roundRect(x, y, w, 74, 10);
+  ctx.roundRect(x, y, w, h, 10);
   ctx.fill();
   ctx.fillStyle = '#9fd8ef';
   ctx.font = '700 19px system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillText(label, x + 14, y + 25);
   ctx.fillStyle = colour;
-  ctx.font = '800 40px system-ui, sans-serif';
-  ctx.fillText(value, x + 14, y + 64);
+  ctx.font = `800 ${fontPx}px system-ui, sans-serif`;
+  ctx.fillText(value, x + 14, y + h - 10);
 }
 
 /** A labelled bar: fuel or integrity. */
@@ -97,15 +97,15 @@ export function drawHud(ctx, W, H, s) {
   // Fuel and integrity, bottom left; score and gear, bottom right.
   bar(ctx, 22, H - 108, 250, `FUEL ${Math.round(fuelFraction(fuel) * 100)}%`, fuelFraction(fuel), fuelIsLow(fuel) ? '#ff9d5c' : '#57c96b', fuelIsLow(fuel));
   bar(ctx, 22, H - 56, 250, `AIRFRAME ${Math.max(0, Math.round(damage.integrity))}%`, Math.max(0, damage.integrity) / 100, damage.integrity < 45 ? '#ff9d5c' : '#57c96b', damage.integrity < 45);
-  plate(ctx, W - 240, H - 108, 218, 'SCORE', String(sortie.score));
+  plate(ctx, W - 240, H - 116, 218, 'SCORE', String(sortie.score), '#eaf6ff', 62, 34);
   ctx.fillStyle = 'rgba(8,18,28,0.62)';
   ctx.beginPath();
-  ctx.roundRect(W - 240, H - 56 + 8, 218, 40, 8);
+  ctx.roundRect(W - 240, H - 46, 218, 38, 8);
   ctx.fill();
-  ctx.font = '800 21px system-ui, sans-serif';
+  ctx.font = '800 20px system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillStyle = plane.gearDown ? '#57c96b' : '#8fa8b8';
-  ctx.fillText(plane.gearDown ? 'GEAR ▼ DOWN' : 'GEAR ▲ UP', W - 226, H - 22);
+  ctx.fillText(plane.gearDown ? 'GEAR ▼ DOWN' : 'GEAR ▲ UP', W - 226, H - 20);
 
   // Centre reticle and the flight-path tick.
   ctx.strokeStyle = 'rgba(234,246,255,0.85)';

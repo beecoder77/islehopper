@@ -74,10 +74,12 @@ function crateFaces(crate) {
 export function renderScene(ctx, W, H, view) {
   const proj = makeView(view.cam, W, H);
   // Sky: a bold gradient, a low sun, and a haze band on the horizon.
-  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.72);
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, '#2b6cb5');
-  sky.addColorStop(0.75, '#8fc3e4');
-  sky.addColorStop(1, '#dceef5');
+  sky.addColorStop(0.52, '#8fc3e4');
+  sky.addColorStop(0.66, '#dceef5');
+  sky.addColorStop(0.78, '#3d7ca3');
+  sky.addColorStop(1, '#17617d'); // below the horizon the wash is sea, not sky
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
   const sun = proj.project(view.cam.x - 1500, view.cam.y + 1350, view.cam.z - 2600);
@@ -209,4 +211,19 @@ export function drawFlatRing(ctx, proj, ring, time) {
   ctx.strokeStyle = RING_STYLES.target(time);
   ctx.lineWidth = Math.max(2, Math.min(9, 1100 / depth));
   ctx.stroke();
+  // A pillar of light over the zone, so the target reads from a mile out.
+  const base = proj.project(ring.x, 1, ring.z);
+  const top = proj.project(ring.x, 95, ring.z);
+  if (base && top) {
+    const wdt = Math.max(3, Math.min(26, 2600 / depth));
+    const grad = ctx.createLinearGradient(0, top.y, 0, base.y);
+    grad.addColorStop(0, 'rgba(255,150,60,0)');
+    grad.addColorStop(1, 'rgba(255,150,60,0.5)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(base.x - wdt / 2, top.y, wdt, base.y - top.y);
+    ctx.fillStyle = 'rgba(255,170,80,0.9)';
+    ctx.beginPath();
+    ctx.arc(top.x, top.y, wdt * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
