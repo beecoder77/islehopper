@@ -16,6 +16,15 @@ Between you and a clean score: a real stall below 41 knots, a fuel tank the thro
 
 The source is split one job per file under `game/src/`: `flight-model.js` (lift, stall, drag), `terrain.js` (the island and its landmarks), `aircraft.js` (the aeroplane, part by part), `render.js` (a small flat-shaded 3D painter), `cockpit.js` (the instrument panel), `hud.js`, `missions.js`, `fuel.js`, `damage.js`, `camera.js`, `input.js`, `audio.js` (every sound synthesised), `shots.js` (the screenshot scenes) and `main.js` (the sortie itself).
 
+## Screenshots
+
+![Cover — Isla Vireo](ss/01-cover.jpg)
+
+![Cockpit view](ss/02-cockpit.jpg)
+
+![Mission — ring run](ss/03-mission.jpg)
+
+![Precision landing](ss/04-landing.jpg)
 ## Run it
 
 ```sh
